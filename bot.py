@@ -7,7 +7,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 BOT_TOKEN = "8037332460:AAHlSCAQTPR4jLylYngzoAXlcohdvllScCE"
 NUMBER_API = "https://all.proportalxc.workers.dev/number?num="
 VEHICLE_API = "https://org.proportalxc.workers.dev/?rc="
-ADMIN_ID = 5192884021  # apni telegram id
+ADMIN_ID = 5192884021
 
 logging.basicConfig(
     filename="bot.log",
@@ -85,7 +85,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             r = requests.get(f"{NUMBER_API}{text}")
-            data = r.json()["result"]["results"][0]
+            data = r.json()["result"][0]
 
             msg = f"""
 API Developer : @h4ckerrmx
@@ -93,10 +93,10 @@ Developer     : @h4ckerrmx
 
 📞 Mobile No     : {data.get("mobile")}
 👨 Name          : {data.get("name")}
-👴 Father Name   : {data.get("fname")}
+👴 Father Name   : {data.get("father_name")}
 🏠 Address       : {data.get("address")}
-🖄 Aadhaar ID    : {data.get("id")}
-📱 Alt Mobile    : {data.get("alt")}
+🖄 Aadhaar ID    : {data.get("aadhaar")}
+📱 Alt Mobile    : {data.get("alternate_number")}
 📍 Circle        : {data.get("circle")}
 📧 Email         : {data.get("email")}
 """
@@ -196,4 +196,5 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
 print("Bot running...")
+
 app.run_polling()
