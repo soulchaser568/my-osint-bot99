@@ -1,30 +1,11 @@
 import requests
-import logging
-import time
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 BOT_TOKEN = "8037332460:AAHlSCAQTPR4jLylYngzoAXlcohdvllScCE"
+
 NUMBER_API = "https://all.proportalxc.workers.dev/number?number="
 VEHICLE_API = "https://org.proportalxc.workers.dev/?rc="
-ADMIN_ID = 5192884021
-
-logging.basicConfig(
-    filename="bot.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-user_last_request = {}
-
-def allowed(user_id):
-    now = time.time()
-    last = user_last_request.get(user_id, 0)
-    if now - last < 5:
-        return False
-    user_last_request[user_id] = now
-    return True
-
 
 keyboard = [["📱 Number Lookup"], ["🚗 Vehicle Lookup"]]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -37,32 +18,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def notify_admin(update, context, lookup_type, query):
-
-    user = update.effective_user
-    username = user.username if user.username else "NoUsername"
-
-    msg = f"""
-🚨 BOT LOOKUP ALERT
-
-👤 Name : {user.first_name}
-🔗 Username : @{username}
-🆔 User ID : {user.id}
-
-🔍 Type : {lookup_type}
-📄 Query : {query}
-"""
-
-    await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
-
-
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    user_id = update.effective_user.id
-
-    if not allowed(user_id):
-        await update.message.reply_text("⏱ Slow down.")
-        return
 
     text = update.message.text.strip()
 
@@ -84,22 +40,11 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if mode == "num":
 
         try:
-            r = requests.get(f"{NUMBER_API}{text}")
+
+            r = requests.get(f"{NUMBER_API}{text}", timeout=20)
             js = r.json()
 
-            data = None
-
-            # format 1
-            if "result" in js and isinstance(js["result"], list):
-                data = js["result"][0]
-
-            # format 2
-            elif "result" in js and "result" in js["result"]:
-                data = js["result"]["result"][0]
-
-            if not data:
-                await update.message.reply_text("No data found.")
-                return
+            data = js["result"]["result"][0]
 
             address = str(data.get("address")).replace("!-!-!", " ")
 
@@ -111,19 +56,16 @@ Developer     : @h4ckerrmx
 👨 Name          : {data.get("name")}
 👴 Father Name   : {data.get("father_name")}
 🏠 Address       : {address}
-🖄 Aadhaar ID    : {data.get("aadhaar") or data.get("aadhar_number")}
-📱 Alt Mobile    : {data.get("alternate_number") or data.get("alternative_mobile")}
-📍 Circle        : {data.get("circle") or data.get("circle/sim")}
+🖄 Aadhaar ID    : {data.get("aadhar_number")}
+📱 Alt Mobile    : {data.get("alternative_mobile")}
+📍 Circle        : {data.get("circle/sim")}
 📧 Email         : {data.get("email")}
 """
 
             await update.message.reply_text(msg)
 
-            await notify_admin(update, context, "Number Lookup", text)
-
         except Exception as e:
-            logging.error(e)
-            await update.message.reply_text("Lookup failed.")
+            await update.message.reply_text("Lookup failed")
 
 
 # -------- VEHICLE LOOKUP --------
@@ -131,15 +73,16 @@ Developer     : @h4ckerrmx
     elif mode == "veh":
 
         try:
-            r = requests.get(f"{VEHICLE_API}{text}")
+
+            r = requests.get(f"{VEHICLE_API}{text}", timeout=20)
             js = r.json()
             d = js.get("data", {})
+
+            rc = d.get("identity_matrix_secure", {}).get("rc_number")
 
             owner = d.get("custodian_profile_analytics", {}).get("legal_owner")
             city = d.get("custodian_profile_analytics", {}).get("city_node")
             address = d.get("custodian_profile_analytics", {}).get("geo_location")
-
-            rc = d.get("identity_matrix_secure", {}).get("rc_number")
 
             engine = d.get("engineering_specification_vault", {}).get("engine_block_id")
             chassis = d.get("engineering_specification_vault", {}).get("chassis_integrity")
@@ -151,7 +94,6 @@ Developer     : @h4ckerrmx
             market_value = d.get("asset_valuation_economics", {}).get("fair_market_value")
             idv = d.get("asset_valuation_economics", {}).get("insurance_idv_estimate")
             resale = d.get("asset_valuation_economics", {}).get("resale_probability")
-
             future_value = d.get("predictive_future_analytics", {}).get("future_value_2yr_projection")
 
             engine_eff = d.get("diagnostic_health_matrix", {}).get("engine_thermal_efficiency")
@@ -199,11 +141,8 @@ Developer     : @h4ckerrmx
 
             await update.message.reply_text(msg)
 
-            await notify_admin(update, context, "Vehicle Lookup", text)
-
         except Exception as e:
-            logging.error(e)
-            await update.message.reply_text("Vehicle lookup failed.")
+            await update.message.reply_text("Vehicle lookup failed")
 
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -212,4 +151,5 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
 print("Bot running...")
+
 app.run_polling()
