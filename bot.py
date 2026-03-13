@@ -5,7 +5,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 BOT_TOKEN = "8037332460:AAHlSCAQTPR4jLylYngzoAXlcohdvllScCE"
-NUMBER_API = "https://all.proportalxc.workers.dev/number?num="
+NUMBER_API = "https://all.proportalxc.workers.dev/number?number="
 VEHICLE_API = "https://org.proportalxc.workers.dev/?rc="
 ADMIN_ID = 5192884021
 
