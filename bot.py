@@ -85,7 +85,23 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             r = requests.get(f"{NUMBER_API}{text}")
-            data = r.json()["result"][0]
+            js = r.json()
+
+            data = None
+
+            # format 1
+            if "result" in js and isinstance(js["result"], list):
+                data = js["result"][0]
+
+            # format 2
+            elif "result" in js and "result" in js["result"]:
+                data = js["result"]["result"][0]
+
+            if not data:
+                await update.message.reply_text("No data found.")
+                return
+
+            address = str(data.get("address")).replace("!-!-!", " ")
 
             msg = f"""
 API Developer : @h4ckerrmx
@@ -94,10 +110,10 @@ Developer     : @h4ckerrmx
 📞 Mobile No     : {data.get("mobile")}
 👨 Name          : {data.get("name")}
 👴 Father Name   : {data.get("father_name")}
-🏠 Address       : {data.get("address")}
-🖄 Aadhaar ID    : {data.get("aadhaar")}
-📱 Alt Mobile    : {data.get("alternate_number")}
-📍 Circle        : {data.get("circle")}
+🏠 Address       : {address}
+🖄 Aadhaar ID    : {data.get("aadhaar") or data.get("aadhar_number")}
+📱 Alt Mobile    : {data.get("alternate_number") or data.get("alternative_mobile")}
+📍 Circle        : {data.get("circle") or data.get("circle/sim")}
 📧 Email         : {data.get("email")}
 """
 
@@ -196,5 +212,4 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
 print("Bot running...")
-
 app.run_polling()
