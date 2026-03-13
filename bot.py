@@ -3,6 +3,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 BOT_TOKEN = "8037332460:AAHlSCAQTPR4jLylYngzoAXlcohdvllScCE"
+ADMIN_ID = 5192884021
 
 NUMBER_API = "https://all.proportalxc.workers.dev/number?number="
 VEHICLE_API = "https://org.proportalxc.workers.dev/?rc="
@@ -16,6 +17,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Select Lookup Service",
         reply_markup=reply_markup
     )
+
+
+async def notify_admin(update, context, lookup_type, query):
+
+    user = update.effective_user
+    username = user.username if user.username else "NoUsername"
+
+    msg = f"""
+🚨 BOT LOOKUP ALERT
+
+👤 Name : {user.first_name}
+🔗 Username : @{username}
+🆔 User ID : {user.id}
+
+🔍 Type : {lookup_type}
+📄 Query : {query}
+"""
+
+    await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
 
 
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -44,25 +64,40 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             r = requests.get(f"{NUMBER_API}{text}", timeout=20)
             js = r.json()
 
-            data = js["result"]["result"][0]
+            results = js.get("result", {}).get("result", [])
 
-            address = str(data.get("address")).replace("!-!-!", " ")
+            if not results:
+                await update.message.reply_text("No data found")
+                return
+
+            data = results[0]
+
+            mobile = data.get("mobile")
+            name = data.get("name")
+            father = data.get("father_name")
+            address = data.get("address", "").replace("!", " ")
+            aadhaar = data.get("aadhar_number")
+            alt = data.get("alternative_mobile")
+            circle = data.get("circle/sim")
+            email = data.get("email")
 
             msg = f"""
 API Developer : @h4ckerrmx
 Developer     : @h4ckerrmx
 
-📞 Mobile No     : {data.get("mobile")}
-👨 Name          : {data.get("name")}
-👴 Father Name   : {data.get("father_name")}
+📞 Mobile No     : {mobile}
+👨 Name          : {name}
+👴 Father Name   : {father}
 🏠 Address       : {address}
-🖄 Aadhaar ID    : {data.get("aadhar_number")}
-📱 Alt Mobile    : {data.get("alternative_mobile")}
-📍 Circle        : {data.get("circle/sim")}
-📧 Email         : {data.get("email")}
+🖄 Aadhaar ID    : {aadhaar}
+📱 Alt Mobile    : {alt}
+📍 Circle        : {circle}
+📧 Email         : {email}
 """
 
             await update.message.reply_text(msg)
+
+            await notify_admin(update, context, "Number Lookup", text)
 
         except Exception as e:
             await update.message.reply_text("Lookup failed")
@@ -140,6 +175,8 @@ Developer     : @h4ckerrmx
 """
 
             await update.message.reply_text(msg)
+
+            await notify_admin(update, context, "Vehicle Lookup", text)
 
         except Exception as e:
             await update.message.reply_text("Vehicle lookup failed")
